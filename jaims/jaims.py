@@ -1,7 +1,7 @@
 import jax
 import tqdm
 import numpy
-from jammer import Chain
+from jaims import Chain
 from functools import partial
 from typing import Callable, Optional, Union, Tuple
 

@@ -4,7 +4,7 @@ from typing import Union, Optional
 
 jarray = Union[jax.numpy.ndarray, jax.numpy.DeviceArray] 
 
-def initiate_random_walkers(nwalkers: int, loc: jarray, upper_bound: jarray, lower_bound: jarray, scale: Optional[Union[int, jarray]]=1e-10):
+def initialize_random_walkers(nwalkers: int, loc: jarray, upper_bound: jarray, lower_bound: jarray, scale: Optional[Union[int, jarray]]=1e-10):
     '''
     A function to generate random blob of walkers
 
