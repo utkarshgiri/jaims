@@ -14,9 +14,10 @@ class Sampler:
     A class for sampling 
     '''
     
-    def __init__(self, likelihood: Callable,
-                       walkers: jarray,
-                       steps: int=1,
+    def __init__(self, nwalkers,
+                       ndim,
+                       likelihood: Callable,
+                       nsteps,
                        burn_in: Union[float, int]=0):
         '''
         Args:
@@ -30,17 +31,16 @@ class Sampler:
 
         self.chain = None
         self.likelihood = likelihood
-        self.walkers = walkers
-        self.steps = steps
-        self.ndim = self.walkers.shape[1]
-        self.num_walkers = self.walkers.shape[0]
+        self.ndim = ndim
+        self.nsteps = nsteps
+        self.num_walkers = nwalkers
         self.burn_in = burn_in
 
         self._a = 2
         self._size = self.num_walkers//2
         self._ids = (jax.numpy.arange(self._size), jax.numpy.arange(self._size) + self._size)
-
-
+        
+        self.key = jax.random.PRNGKey(43)
 
     @partial(jax.jit, static_argnums=(0,))
     def _proposal(self, sample: jarray,
@@ -85,8 +85,32 @@ class Sampler:
         sample = jax.numpy.where(accepted[:,None], q, sample)
         return sample
 
+    @partial(jax.jit, static_argnums=(0,))
+    def body_func(self, i, walkers):
+        self.key, key, *subkey = jax.random.split(self.key, 6)
+        jax.random.permutation(key, walkers)
+        sample, complement = walkers[i,self._ids[0],:], walkers[i,self._ids[1],:]
+        sample = self.sample(sample, complement, subkey[:2])
+        complement = self.sample(complement, sample, subkey[2:])
+        walkers = jax.ops.index_update(walkers, (i+1,), jax.numpy.concatenate([sample, complement], axis=0))
+        return walkers
+    
+    @partial(jax.jit, static_argnums=(0,))
+    def scanner(self, walkers, i):
 
-    def run_mcmc(self, key: jarray) -> jarray:
+        key = jax.random.PRNGKey(i)
+        key, *subkey = jax.random.split(key, 5)
+        jax.random.permutation(key, walkers)
+        sample, complement = walkers[self._ids[0],:], walkers[self._ids[1],:]
+        sample = self.sample(sample, complement, subkey[:2])
+        complement = self.sample(complement, sample, subkey[2:])
+        walkers = jax.numpy.concatenate([sample, complement], axis=0)
+
+        return walkers, walkers
+    
+    @partial(jax.jit, static_argnums=(0,))
+    def run_mcmc(self, key: jarray,
+                       initial_state: jarray) -> jarray:
         '''
         A function to perform MCMC sampling
         Args:
@@ -94,19 +118,11 @@ class Sampler:
         Returns:
             a jax.numpy array of shape(steps*num_walkers, ndim) containing proposed samples
         '''
-        #TODO re-write this more optimally using fori_loop, perhaps!
-        samples = []
-        for _ in tqdm.tqdm(range(self.steps)):
-            key, *subkey = jax.random.split(key, 5)
-            jax.random.permutation(key, self.walkers)
-            sample, complement = self.walkers[self._ids[0],:], self.walkers[self._ids[1],:]
-            sample = self.sample(sample, complement, subkey[:2])
-            complement = self.sample(complement, sample, subkey[2:])
-            self.walkers = jax.numpy.concatenate([sample, complement], axis=0)
-            samples.append(self.walkers)
-        self.chain = Chain(jax.numpy.stack(samples), burn_in=self.burn_in)
-        return self.chain
-
+        walkers = jax.numpy.array(initial_state)
+        #scanner = partial(self.scanner, key=key)
+        final, result = jax.lax.scan(self.scanner, walkers, jax.numpy.arange(self.nsteps))
+        #self.chain = Chain(numpy.array(result), burn_in=self.burn_in)
+        return result
 
     def reset(self, likelihood: Callable,
                        walkers: jarray,
