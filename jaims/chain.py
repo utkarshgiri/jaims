@@ -10,7 +10,8 @@ logger.setLevel(logging.INFO)
 
 __all__ = ['Chain']
 
-jarray = Union[numpy.ndarray, jax.numpy.DeviceArray]
+#jarray = Union[numpy.ndarray, jax.numpy.DeviceArray]
+jarray = Union[numpy.ndarray, jax.Array]
 
 class Chain:
 

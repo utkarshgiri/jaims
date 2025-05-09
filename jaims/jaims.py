@@ -7,7 +7,8 @@ from typing import Callable, Optional, Union, Tuple
 
 __all__ = ['Sampler']
 
-jarray = Union[jax.numpy.ndarray, jax.numpy.DeviceArray] 
+#jarray = Union[jax.numpy.ndarray, jax.numpy.DeviceArray] 
+jarray = Union[jax.numpy.ndarray, jax.Array] 
 
 class Sampler:
     '''

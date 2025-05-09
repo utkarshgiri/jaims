@@ -2,7 +2,8 @@ import jax
 import numpy
 from typing import Union, Optional
 
-jarray = Union[jax.numpy.ndarray, jax.numpy.DeviceArray] 
+#jarray = Union[jax.numpy.ndarray, jax.numpy.DeviceArray] 
+jarray = Union[jax.numpy.ndarray, jax.Array] 
 
 def initialize_random_walkers(nwalkers: int, loc: jarray, upper_bound: jarray, lower_bound: jarray, scale: Optional[Union[int, jarray]]=1e-10):
     '''
